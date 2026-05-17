@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtuálne Košice | Mapa lokality</title>
+  <link rel="stylesheet" href="css/swipe-bar.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --panel-bg: rgba(17, 24, 39, 0.84);
+      --panel-border: rgba(255, 255, 255, 0.14);
+      --soft-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f4f7fb;
+      --text-soft: rgba(255, 255, 255, 0.72);
+      --accent: #8ec0ff;
+      --accent-strong: #6ca8ff;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      --radius-xl: 28px;
+      --radius-lg: 18px;
+      --selected: #a9d0ff;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text-main);
+      background:
+              linear-gradient(rgba(7, 12, 20, 0.78), rgba(7, 12, 20, 0.86)),
+              url("assets/textures/kosice-map.png") center center / cover no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 24px;
+      overflow: hidden;
+    }
+
+    .background-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+              radial-gradient(circle at 20% 20%, rgba(120, 170, 255, 0.12), transparent 30%),
+              radial-gradient(circle at 80% 25%, rgba(90, 140, 255, 0.1), transparent 28%),
+              radial-gradient(circle at 50% 85%, rgba(100, 160, 255, 0.08), transparent 32%);
+    }
+
+    .screen {
+      position: relative;
+      z-index: 1;
+      width: min(1320px, 100%);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      padding: 0;
+    }
+
+    .screen .swipe-scroll {
+      padding: 24px 24px 22px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .ghost-btn {
+      border: 1px solid var(--soft-border);
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      border-radius: 14px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.22s ease;
+    }
+
+    .ghost-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .area-title {
+      text-align: center;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr 0.75fr;
+      gap: 20px;
+      min-height: 640px;
+    }
+
+    .map-panel,
+    .sidebar {
+      border: 1px solid var(--soft-border);
+      border-radius: 24px;
+      background: rgba(8, 13, 22, 0.45);
+      overflow: hidden;
+    }
+
+    .map-panel {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .map-frame {
+      position: relative;
+      flex: 1;
+      min-height: 540px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    .map-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.62);
+      display: block;
+    }
+
+    .map-shade {
+      position: absolute;
+      inset: 0;
+      background:
+              linear-gradient(to bottom, rgba(8, 12, 20, 0.08), rgba(8, 12, 20, 0.32)),
+              radial-gradient(circle at center, rgba(255, 255, 255, 0.04), transparent 60%);
+      pointer-events: none;
+    }
+
+    .point {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.88);
+      background: rgba(30, 57, 92, 0.9);
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: 0.18s ease;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+    }
+
+    .point:hover {
+      transform: translate(-50%, -50%) scale(1.06);
+      background: rgba(70, 120, 190, 0.96);
+    }
+
+    .point.active {
+      background: var(--selected);
+      color: #0d1828;
+      border-color: white;
+      box-shadow: 0 0 0 6px rgba(169, 208, 255, 0.14);
+    }
+
+    .tooltip {
+      position: absolute;
+      min-width: 230px;
+      max-width: 290px;
+      background: rgba(15, 23, 36, 0.97);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: white;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 16px 35px rgba(0, 0, 0, 0.35);
+      display: none;
+      z-index: 4;
+    }
+
+    .tooltip.active {
+      display: block;
+    }
+
+    .tooltip h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .tooltip p {
+      font-size: 0.92rem;
+      line-height: 1.45;
+      color: var(--text-soft);
+      margin-bottom: 10px;
+    }
+
+    .tooltip small {
+      color: rgba(255, 255, 255, 0.55);
+      display: block;
+    }
+
+    .map-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .selected-info {
+      color: var(--text-soft);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .open-btn {
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #09111c;
+      font-weight: 700;
+      font-size: 0.98rem;
+      border-radius: 14px;
+      padding: 12px 22px;
+      cursor: pointer;
+      transition: 0.22s ease;
+      min-width: 170px;
+    }
+
+    .open-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    .open-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 640px;
+    }
+
+    .sidebar-head {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--soft-border);
+    }
+
+    .sidebar-head h2 {
+      font-size: 1.25rem;
+      margin-bottom: 6px;
+    }
+
+    .sidebar-head p {
+      color: var(--text-soft);
+      font-size: 0.93rem;
+      line-height: 1.45;
+    }
+
+    .object-list {
+      padding: 14px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .object-item {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 14px;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    .object-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .object-item.active {
+      background: rgba(169, 208, 255, 0.12);
+      border-color: rgba(169, 208, 255, 0.55);
+      box-shadow: inset 0 0 0 1px rgba(169, 208, 255, 0.18);
+    }
+
+    .object-item-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .object-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .object-name {
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .object-desc {
+      color: var(--text-soft);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .object-audio {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .object-audio-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .object-audio-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: rgba(255, 255, 255, 0.55);
+      text-transform: uppercase;
+    }
+
+    .object-audio-row audio {
+      width: 100%;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        min-height: auto;
+      }
+
+      .map-frame {
+        min-height: 430px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 14px;
+      }
+
+      .screen .swipe-scroll {
+        padding: 16px;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .area-title {
+        order: -1;
+      }
+
+      .map-frame {
+        min-height: 340px;
+      }
+
+      .point {
+        width: 38px;
+        height: 38px;
+        font-size: 0.88rem;
+      }
+
+      .map-footer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .open-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+<script src="js/auth.js"></script>
+<script>AUTH.requireAuth();</script>
+<div class="background-glow"></div>
+
+<div class="screen swipe-panel">
+  <div class="swipe-scroll" id="screenScroll" tabindex="0" role="region" aria-label="Mapa lokality — posuň obsah vertikálne">
+  <div class="topbar">
+    <button class="ghost-btn" onclick="window.location.href='locations.html'">← Späť</button>
+    <div class="area-title" id="areaTitle">Historické centrum</div>
+    <button class="ghost-btn" onclick="window.location.href='favorites.html'">⭐ Obľúbené</button>
+  </div>
+
+  <div class="layout">
+    <section class="map-panel">
+      <div class="map-frame" id="mapFrame">
+        <img id="mapImage" src="assets/textures/kosice-map.png" alt="Mapa lokality" />
+        <div class="map-shade"></div>
+        <div class="tooltip" id="tooltip"></div>
+      </div>
+
+      <div class="map-footer">
+        <div class="selected-info" id="selectedInfo">
+          Vyber objekt kliknutím na číslo na mape alebo názov v zozname vpravo.
+        </div>
+        <button class="open-btn" id="openModelBtn" disabled>Otvoriť 3D model</button>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2>Objekty lokality</h2>
+        <p id="sidebarText">
+          Dostupné budovy a modely pre aktuálne zvolenú lokalitu.
+        </p>
+      </div>
+      <div class="object-list" id="objectList"></div>
+    </aside>
+  </div>
+  </div>
+
+  <div class="swipe-bar" id="swipeBar" role="scrollbar" aria-orientation="vertical" aria-controls="screenScroll" hidden aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <span class="swipe-bar-hint" aria-hidden="true">↑ ↓</span>
+    <div class="swipe-bar-track" id="swipeTrack">
+      <div class="swipe-bar-thumb" id="swipeThumb" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/buildingsConfig.js?v=20260406-7"></script>
+<script>
+  const zones = {
+    "historicke-centrum": {
+      title: "Historické centrum",
+      description: "Hlavné objekty historického centra mesta Košice.",
+      mapImage: "assets/textures/historicke-centrum-map.jpg",
+      objects: [
+        {
+          id: "historicke_model_hlavna",
+          number: 1,
+          name: "Hlavna",
+          description: "Hlavný objekt historického centra.",
+          x: 54,
+          y: 48
+        },
+        {
+          id: "historicke_krizovatka",
+          number: 2,
+          name: "MUZEUM_NM",
+          description: "Záložný objekt pre historické centrum.",
+          x: 54,
+          y: 38
+        },
+        {
+          id: "historicke_model_of_streets",
+          number: 3,
+          name: "pepsi",
+          description: "Záložný objekt pre historické centrum.",
+          x: 64,
+          y: 68
+        },
+        {
+          id: "historicke_dom_alzbety",
+          number: 4,
+          name: "Dóm sv. Alžbety",
+          description: "Najväčší gotický chrám na Slovensku.",
+          x: 55,
+          y: 58
+        }
+      ]
+    },
+
+    "univerzitna-zona": {
+      title: "Univerzitná zóna",
+      description: "Vybrané objekty univerzitného prostredia a okolia.",
+      mapImage: "assets/textures/univerzitna-zona.png",
+      objects: [
+        {
+          id: "univerzitna_amfik_final",
+          number: 1,
+          name: "amfik",
+          description: "Model amfiteátra a jeho blízkeho priestoru.",
+          x: 25,
+          y: 90
+        },
+        {
+          id: "univerzitna_both",
+          number: 2,
+          name: "Both",
+          description: "Kombinovaný model vybraných objektov univerzitnej zóny.",
+          x: 48,
+          y: 64
+        },
+        {
+          id: "univerzitna_botanicka_zahrada",
+          number: 3,
+          name: "Botanicka zahrada",
+          description: "Model botanickej záhrady ako významného bodu lokality.",
+          x: 10,
+          y: 5
+        },
+        /*{
+          id: "univerzitna_urbanova_veza",
+          number: 4,
+          name: "Urbanova veža",
+          description: "Historická zvonica — referenčný model v projekte.",
+          x: 48,
+          y: 72
+        }*/
+      ]
+    },
+
+    "mestska-zona": {
+      title: "Mestská zóna",
+      description: "Mestské a dopravné objekty širšieho urbanistického priestoru.",
+      mapImage: "assets/textures/mestska-zona.png",
+      objects: [
+        /*{
+          id: "mestska_kruhak_final",
+          number: 1,
+          name: "Final_model",
+          description: "Model mestského objektu.",
+          x: 30,
+          y: 42
+        },*/
+        {
+          id: "mestska_model_palackeho_final",
+          number: 1,
+          name: "MODEL_PALACKEHO",
+          description: "Model objektu Palackého v rámci mestskej zóny.",
+          x: 40,
+          y: 85
+        },
+        {
+          id: "mestska_final_3_budovi",
+          number: 2,
+          name: "Zeleznicna Stanica",
+          description: "Model mestského dopravného objektu.",
+          x: 95,
+          y: 70
+        },
+        {
+          id: "mestska_jakubov_palac",
+          number: 3,
+          name: "Jakubov palác",
+          description: "Neogotický palác v širšom mestskom kontexte.",
+          x: 45,
+          y: 75
+        }
+      ]
+    }
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const zoneKey = params.get("zone") || "historicke-centrum";
+  const zone = zones[zoneKey] || zones["historicke-centrum"];
+
+  document.body.style.backgroundImage =
+    `linear-gradient(rgba(7, 12, 20, 0.78), rgba(7, 12, 20, 0.86)), url("${zone.mapImage}")`;
+
+  const areaTitle = document.getElementById("areaTitle");
+  const sidebarText = document.getElementById("sidebarText");
+  const mapImage = document.getElementById("mapImage");
+  const mapFrame = document.getElementById("mapFrame");
+  const objectList = document.getElementById("objectList");
+  const tooltip = document.getElementById("tooltip");
+  const selectedInfo = document.getElementById("selectedInfo");
+  const openModelBtn = document.getElementById("openModelBtn");
+
+  let selectedObject = null;
+
+  areaTitle.textContent = zone.title;
+  sidebarText.textContent = zone.description;
+  mapImage.src = zone.mapImage;
+  mapImage.alt = zone.title;
+
+  function renderPoints() {
+    zone.objects.forEach((obj) => {
+      const point = document.createElement("button");
+      point.className = "point";
+      point.textContent = obj.number;
+      point.style.left = obj.x + "%";
+      point.style.top = obj.y + "%";
+      point.dataset.id = obj.id;
+
+      point.addEventListener("click", () => {
+        selectObject(obj.id, true);
+      });
+
+      mapFrame.appendChild(point);
+    });
+  }
+
+  function getBuildingAudio(id) {
+    const list = window.BUILDINGS;
+    if (!Array.isArray(list)) return { sk: "", en: "" };
+    const b = list.find((x) => (x.id || x.key) === id);
+    if (!b) return { sk: "", en: "" };
+    return {
+      sk: (b.audioSk || "").trim(),
+      en: (b.audioEn || "").trim()
+    };
+  }
+
+  function renderList() {
+    zone.objects.forEach((obj) => {
+      const item = document.createElement("div");
+      item.className = "object-item";
+      item.dataset.id = obj.id;
+
+      item.innerHTML = `
+        <div class="object-item-top">
+          <div class="object-number">${obj.number}</div>
+          <div class="object-name">${obj.name}</div>
+        </div>
+        <div class="object-desc">${obj.description}</div>
+      `;
+
+      const audioUrls = getBuildingAudio(obj.id);
+      if (audioUrls.sk || audioUrls.en) {
+        const wrap = document.createElement("div");
+        wrap.className = "object-audio";
+        if (audioUrls.sk) {
+          const row = document.createElement("div");
+          row.className = "object-audio-row";
+          const lab = document.createElement("div");
+          lab.className = "object-audio-label";
+          lab.textContent = "Audio popis · Slovenčina";
+          const a = document.createElement("audio");
+          a.controls = true;
+          a.preload = "none";
+          a.src = audioUrls.sk;
+          row.appendChild(lab);
+          row.appendChild(a);
+          wrap.appendChild(row);
+        }
+        if (audioUrls.en) {
+          const row = document.createElement("div");
+          row.className = "object-audio-row";
+          const lab = document.createElement("div");
+          lab.className = "object-audio-label";
+          lab.textContent = "Audio description · English";
+          const a = document.createElement("audio");
+          a.controls = true;
+          a.preload = "none";
+          a.src = audioUrls.en;
+          row.appendChild(lab);
+          row.appendChild(a);
+          wrap.appendChild(row);
+        }
+        item.appendChild(wrap);
+      }
+
+      item.addEventListener("click", (e) => {
+        if (e.target.closest && e.target.closest("audio")) return;
+        selectObject(obj.id, true);
+      });
+
+      objectList.appendChild(item);
+    });
+  }
+
+  function updateActiveState(id) {
+    document.querySelectorAll(".point").forEach((point) => {
+      point.classList.toggle("active", point.dataset.id === id);
+    });
+
+    document.querySelectorAll(".object-item").forEach((item) => {
+      item.classList.toggle("active", item.dataset.id === id);
+    });
+  }
+
+  function showTooltip(obj) {
+    tooltip.innerHTML = `
+      <h3>${obj.number}. ${obj.name}</h3>
+      <p>${obj.description}</p>
+      <small>Klikni na tlačidlo „Otvoriť 3D model“ pre pokračovanie.</small>
+    `;
+
+    tooltip.style.left = `calc(${obj.x}% + 26px)`;
+    tooltip.style.top = `calc(${obj.y}% - 26px)`;
+    tooltip.classList.add("active");
+  }
+
+  function selectObject(id, showTip = false) {
+    const obj = zone.objects.find((item) => item.id === id);
+    if (!obj) return;
+
+    selectedObject = obj;
+    updateActiveState(id);
+
+    selectedInfo.textContent = `Vybraný objekt: ${obj.name}`;
+    openModelBtn.disabled = false;
+
+    if (showTip) {
+      showTooltip(obj);
+    }
+  }
+
+  openModelBtn.addEventListener("click", () => {
+    if (!selectedObject) return;
+
+    const encodedZone = encodeURIComponent(zoneKey);
+    const encodedId = encodeURIComponent(selectedObject.id);
+
+    localStorage.setItem("selectedSceneBuilding", JSON.stringify({
+      zone: zoneKey,
+      id: selectedObject.id
+    }));
+
+    window.location.href = `3dscene.html?zone=${encodedZone}&id=${encodedId}`;
+  });
+
+  renderPoints();
+  renderList();
+</script>
+<script src="js/swipe-bar.js"></script>
+</body>
+</html>

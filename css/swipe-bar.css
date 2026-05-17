@@ -1,0 +1,131 @@
+/* Vertikálny posuv + vlastná „swipe“ lišta (thumb + track) */
+
+.swipe-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: min(calc(100vh - 32px), calc(100dvh - 32px));
+}
+
+.swipe-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.swipe-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.swipe-panel.has-swipe-bar .swipe-scroll {
+  padding-right: 20px;
+}
+
+.swipe-bar {
+  position: absolute;
+  right: 6px;
+  top: 14px;
+  bottom: 14px;
+  width: 22px;
+  z-index: 6;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.swipe-bar.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.swipe-bar-track {
+  position: relative;
+  width: 6px;
+  flex: 1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.swipe-bar-thumb {
+  position: absolute;
+  left: 50%;
+  margin-left: -5px;
+  width: 10px;
+  min-height: 36px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(142, 192, 255, 0.88), rgba(108, 168, 255, 0.78));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  touch-action: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.swipe-bar-thumb:active {
+  cursor: grabbing;
+}
+
+.swipe-bar-hint {
+  position: absolute;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.swipe-bar.is-visible .swipe-bar-hint {
+  opacity: 1;
+}
+
+/* Stránky so style.css – obal kontajnera */
+.swipe-panel--page {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+/* 3D scéna: pravý panel modelov */
+#zoneModelsPanel.swipe-panel {
+  max-height: min(85vh, 720px);
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  #zoneModelsPanel.swipe-panel {
+    max-height: min(38vh, 420px);
+  }
+}
+
+/* Bočný panel – scrollovateľný obsah */
+.sidebar-panel.swipe-panel {
+  max-height: min(92vh, 880px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.sidebar-panel.swipe-panel > .swipe-scroll {
+  padding: 16px;
+}
+
+.sidebar-panel.swipe-panel > .swipe-bar {
+  top: 10px;
+  bottom: 10px;
+}

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <title>Virtuálne Košice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/swipe-bar.css">
+    <style>
+        .login-box {
+            max-width: 380px;
+            margin: 0 auto 20px;
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(17, 24, 39, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            text-align: left;
+        }
+        .auth-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+            color: #e8eeff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .auth-tab.is-active {
+            background: linear-gradient(135deg, rgba(86, 119, 255, 0.55), rgba(56, 87, 213, 0.75));
+            border-color: rgba(143, 163, 255, 0.5);
+        }
+        .auth-panel[hidden] {
+            display: none !important;
+        }
+        .login-box label {
+            display: block;
+            font-size: 0.88rem;
+            color: rgba(255, 255, 255, 0.75);
+            margin-bottom: 6px;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.25);
+            color: #f4f7fb;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .login-error {
+            color: #fca5a5;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            min-height: 1.2em;
+        }
+        .login-success {
+            color: #86efac;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            min-height: 1.2em;
+        }
+        .logout-row {
+            margin-top: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<script src="js/auth.js"></script>
+
+<div class="background"></div>
+
+<div class="swipe-panel swipe-panel--page">
+  <div class="swipe-scroll" id="screenScroll" tabindex="0" role="region" aria-label="Úvodná stránka">
+    <div class="container fade-in">
+      <h1 class="title">Virtuálne Košice</h1>
+      <p class="subtitle">Webová 3D vizualizácia vybraných lokalít mesta Košice</p>
+
+      <div id="loginBlock">
+        <div class="login-box">
+          <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab is-active" id="tabLogin" role="tab" aria-selected="true">Prihlásenie</button>
+            <button type="button" class="auth-tab" id="tabRegister" role="tab" aria-selected="false">Registrácia</button>
+          </div>
+
+          <div id="panelLogin" class="auth-panel" role="tabpanel">
+            <div id="loginInfo" class="login-success" hidden aria-live="polite"></div>
+            <div id="loginError" class="login-error" aria-live="polite"></div>
+            <form id="loginForm" autocomplete="on">
+              <label for="loginUser">Používateľské meno</label>
+              <input id="loginUser" name="username" type="text" required autocomplete="username" />
+              <label for="loginPass">Heslo</label>
+              <input id="loginPass" name="password" type="password" required autocomplete="current-password" />
+              <button class="main-btn" type="submit" style="width:100%">Prihlásiť sa</button>
+            </form>
+          </div>
+
+          <div id="panelRegister" class="auth-panel" hidden role="tabpanel">
+            <div id="registerError" class="login-error" aria-live="polite"></div>
+            <div id="registerSuccess" class="login-success" aria-live="polite"></div>
+            <form id="registerForm" autocomplete="on">
+              <label for="regFirstName">Meno</label>
+              <input id="regFirstName" name="given-name" type="text" required minlength="2" autocomplete="given-name" />
+              <label for="regLastName">Priezvisko</label>
+              <input id="regLastName" name="family-name" type="text" required minlength="2" autocomplete="family-name" />
+              <label for="regEmail">E-mail</label>
+              <input id="regEmail" name="email" type="email" required autocomplete="email" />
+              <label for="regUser">Používateľské meno</label>
+              <input id="regUser" name="username" type="text" required minlength="3" autocomplete="username" />
+              <label for="regPass">Heslo</label>
+              <input id="regPass" name="password" type="password" required minlength="4" autocomplete="new-password" />
+              <label for="regPass2">Heslo znova</label>
+              <input id="regPass2" name="password2" type="password" required minlength="4" autocomplete="new-password" />
+              <button class="main-btn" type="submit" style="width:100%">Vytvoriť účet</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="mainBlock" hidden>
+        <button class="main-btn" type="button" id="enterBtn">
+          Vstúpiť do 3D prostredia
+        </button>
+
+        <button class="small-btn" style="margin-top:10px" type="button" id="favBtn">
+          ⭐ Obľúbené
+        </button>
+
+        <div class="logout-row">
+          <button class="small-btn" type="button" id="logoutBtn">Odhlásiť sa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="swipe-bar" role="scrollbar" aria-orientation="vertical" aria-controls="screenScroll" hidden aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <span class="swipe-bar-hint" aria-hidden="true">↑ ↓</span>
+    <div class="swipe-bar-track">
+      <div class="swipe-bar-thumb" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+<script src="js/swipe-bar.js"></script>
+<script>
+(function () {
+  var loginBlock = document.getElementById("loginBlock");
+  var mainBlock = document.getElementById("mainBlock");
+  var loginForm = document.getElementById("loginForm");
+  var registerForm = document.getElementById("registerForm");
+  var errEl = document.getElementById("loginError");
+  var loginInfo = document.getElementById("loginInfo");
+  var regErr = document.getElementById("registerError");
+  var regOk = document.getElementById("registerSuccess");
+  var panelLogin = document.getElementById("panelLogin");
+  var panelRegister = document.getElementById("panelRegister");
+  var tabLogin = document.getElementById("tabLogin");
+  var tabRegister = document.getElementById("tabRegister");
+  var params = new URLSearchParams(window.location.search);
+  var nextUrl = params.get("next");
+
+  function showMain() {
+    loginBlock.hidden = true;
+    mainBlock.hidden = false;
+    errEl.textContent = "";
+    if (loginInfo) {
+      loginInfo.textContent = "";
+      loginInfo.hidden = true;
+    }
+    regErr.textContent = "";
+    regOk.textContent = "";
+  }
+
+  function showLogin() {
+    loginBlock.hidden = false;
+    mainBlock.hidden = true;
+  }
+
+  function setAuthTab(isRegister) {
+    errEl.textContent = "";
+    if (loginInfo && isRegister) {
+      loginInfo.textContent = "";
+      loginInfo.hidden = true;
+    }
+    regErr.textContent = "";
+    regOk.textContent = "";
+    tabLogin.classList.toggle("is-active", !isRegister);
+    tabRegister.classList.toggle("is-active", isRegister);
+    tabLogin.setAttribute("aria-selected", !isRegister ? "true" : "false");
+    tabRegister.setAttribute("aria-selected", isRegister ? "true" : "false");
+    panelLogin.hidden = !!isRegister;
+    panelRegister.hidden = !isRegister;
+  }
+
+  if (window.AUTH && AUTH.isLoggedIn()) {
+    showMain();
+  } else {
+    showLogin();
+    setAuthTab(false);
+  }
+
+  tabLogin.addEventListener("click", function () { setAuthTab(false); });
+  tabRegister.addEventListener("click", function () { setAuthTab(true); });
+
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    errEl.textContent = "";
+    if (loginInfo) {
+      loginInfo.textContent = "";
+      loginInfo.hidden = true;
+    }
+    var u = document.getElementById("loginUser").value;
+    var p = document.getElementById("loginPass").value;
+    if (AUTH.login(u, p)) {
+      if (nextUrl && /^[a-zA-Z0-9._-]+\.html(\?[^#]*)?$/.test(nextUrl)) {
+        window.location.href = nextUrl;
+      } else {
+        showMain();
+      }
+    } else {
+      errEl.textContent = "Nesprávne meno alebo heslo.";
+    }
+  });
+
+  registerForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    regErr.textContent = "";
+    regOk.textContent = "";
+    var res = AUTH.register({
+      firstName: document.getElementById("regFirstName").value,
+      lastName: document.getElementById("regLastName").value,
+      email: document.getElementById("regEmail").value,
+      login: document.getElementById("regUser").value,
+      password: document.getElementById("regPass").value,
+      passwordAgain: document.getElementById("regPass2").value
+    });
+    if (res.ok) {
+      regOk.textContent = res.message;
+      document.getElementById("loginUser").value = document.getElementById("regUser").value.trim();
+      document.getElementById("loginPass").value = "";
+      document.getElementById("regFirstName").value = "";
+      document.getElementById("regLastName").value = "";
+      document.getElementById("regEmail").value = "";
+      document.getElementById("regUser").value = "";
+      document.getElementById("regPass").value = "";
+      document.getElementById("regPass2").value = "";
+      setAuthTab(false);
+      if (loginInfo) {
+        loginInfo.textContent = res.message;
+        loginInfo.hidden = false;
+      }
+    } else {
+      regErr.textContent = res.message;
+    }
+  });
+
+  document.getElementById("enterBtn").addEventListener("click", function () {
+    window.location.href = "locations.html";
+  });
+  document.getElementById("favBtn").addEventListener("click", function () {
+    window.location.href = "favorites.html";
+  });
+  document.getElementById("logoutBtn").addEventListener("click", function () {
+    AUTH.logout();
+    showLogin();
+    setAuthTab(false);
+    document.getElementById("loginPass").value = "";
+  });
+})();
+</script>
+</body>
+</html>

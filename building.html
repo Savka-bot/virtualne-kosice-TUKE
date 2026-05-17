@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtuálne Košice – Objekt</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/swipe-bar.css">
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+</head>
+<body>
+<script src="js/auth.js"></script>
+<script>AUTH.requireAuth();</script>
+<div class="background"></div>
+
+<div class="swipe-panel swipe-panel--page" style="max-width:700px;">
+  <div class="swipe-scroll" id="buildingScroll" tabindex="0" role="region" aria-label="Detail objektu">
+    <div class="container fade-in" style="text-align: center;">
+      <h1 id="title">Budova</h1>
+      <p id="desc">Popis miesta...</p>
+
+      <div style="height: 400px; margin-top: 20px; border-radius: 12px; overflow: hidden;">
+        <a-scene embedded>
+          <a-entity gltf-model="" scale="0.35 0.35 0.35" position="0 0 -3" id="model"></a-entity>
+          <a-sky color="#ECECEC"></a-sky>
+        </a-scene>
+      </div>
+
+      <p id="story" style="margin-top: 25px; color: #dce3ff; font-size: 15px; line-height: 1.5;"></p>
+
+      <button class="main-btn" style="margin-top: 20px;" onclick="addToFavorites(currentId)">
+        ⭐ Uložiť do obľúbených
+      </button>
+
+      <button class="small-btn" style="margin-top: 10px;" onclick="window.location.href='3dscene.html'">
+        Späť
+      </button>
+    </div>
+  </div>
+  <div class="swipe-bar" role="scrollbar" aria-orientation="vertical" aria-controls="buildingScroll" hidden aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <span class="swipe-bar-hint" aria-hidden="true">↑ ↓</span>
+    <div class="swipe-bar-track">
+      <div class="swipe-bar-thumb" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Jednotný zdroj dát -->
+<script src="js/buildingsConfig.js"></script>
+<script src="js/swipe-bar.js"></script>
+
+<script>
+  // načítanie parametra id z URL
+  const params = new URLSearchParams(window.location.search);
+  const currentId = params.get('id');
+
+  // bezpečný prístup k dátam
+  const info = (window.BUILDINGS && currentId) ? window.BUILDINGS[currentId] : null;
+
+  if (info) {
+    document.getElementById('title').textContent = info.name || "Budova";
+    document.getElementById('desc').textContent = info.desc || "";
+    document.getElementById('story').textContent = info.story || "";
+    const modelEl = document.getElementById('model');
+    const primary = info.model || "";
+    const fallback = info.modelUrlFallback || "";
+
+    modelEl.setAttribute('gltf-model', primary);
+
+    // Fallback, если основная модель недоступна.
+    if (fallback && fallback !== primary) {
+      let tried = false;
+      modelEl.addEventListener('model-error', () => {
+        if (tried) return;
+        tried = true;
+        modelEl.setAttribute('gltf-model', fallback);
+      });
+    }
+  } else {
+    document.getElementById('title').textContent = "Neznámy objekt";
+    document.getElementById('desc').textContent = "Tento objekt sa nenašiel alebo nebol vybraný.";
+    document.getElementById('story').textContent = "Vráť sa do scény a vyber objekt kliknutím.";
+    document.getElementById('model').setAttribute('gltf-model', "");
+  }
+
+  function addToFavorites(id) {
+    if (!id) return;
+
+    let fav = JSON.parse(localStorage.getItem("favorites") || "[]");
+    if (!fav.includes(id)) {
+      fav.push(id);
+      localStorage.setItem("favorites", JSON.stringify(fav));
+      alert("Pridané do obľúbených!");
+    } else {
+      alert("Už je v obľúbených!");
+    }
+  }
+
+  if (typeof window.refreshSwipeBars === "function") window.refreshSwipeBars();
+</script>
+</body>
+</html>
