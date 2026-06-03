@@ -269,44 +269,6 @@
                 <p id="pWikiInfo" class="info-text wiki-info-text">Po výbere modelu sa zobrazí stručný text podľa Wikipédie.</p>
             </div>
 
-            <div class="info-section info-collapse-section">
-                <button
-                        id="buildingMetaToggle"
-                        class="collapse-toggle"
-                        type="button"
-                        aria-expanded="false"
-                        aria-controls="buildingMetaBody"
-                >
-                    <span>Informácie o budove / Information about building</span>
-                    <span id="buildingMetaChevron" class="collapse-chevron">▾</span>
-                </button>
-
-                <div id="buildingMetaBody" class="collapse-body is-collapsed">
-                    <div class="meta-list">
-                        <div class="meta-row">
-                            <div class="meta-name">Lokalita / Location</div>
-                            <div id="metaLocation" class="meta-value">Neuvedené / Not specified</div>
-                        </div>
-                        <div class="meta-row">
-                            <div class="meta-name">Typ / Type</div>
-                            <div id="metaType" class="meta-value">Neuvedené / Not specified</div>
-                        </div>
-                        <div class="meta-row">
-                            <div class="meta-name">Architektonický štýl / Architectural style</div>
-                            <div id="metaStyle" class="meta-value">Neuvedené / Not specified</div>
-                        </div>
-                        <div class="meta-row">
-                            <div class="meta-name">Obdobie / Period</div>
-                            <div id="metaPeriod" class="meta-value">Neuvedené / Not specified</div>
-                        </div>
-                        <div class="meta-row">
-                            <div class="meta-name">Architekt / Architect</div>
-                            <div id="metaArchitect" class="meta-value">Neuvedené / Not specified</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="info-section">
                 <div class="info-label">Zdroj / Source</div>
                 <a id="sourceLink" class="source-link disabled" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">
@@ -379,6 +341,7 @@
     <a-sky src="assets/sky.jpg" rotation="0 -90 0"></a-sky>
 
     <a-plane
+            id="sceneFloor"
             rotation="-90 0 0"
             width="80"
             height="80"
@@ -416,7 +379,7 @@
         <a-entity
                 camera
                 look-controls
-                wasd-controls="acceleration: 22">
+                wasd-controls="acceleration: 52">
         </a-entity>
         <a-light
                 type="point"
@@ -428,44 +391,16 @@
         </a-light>
     </a-entity>
 
-    <a-entity id="presentationAnchor">
-        <a-cylinder
-                id="museumPodium"
-                position="0 0.2 0"
-                radius="4"
-                height="0.4"
-                color="#1f2937"
-                shadow="receive: true; cast: true">
-        </a-cylinder>
-
-        <a-ring
-                id="focusRing"
-                position="0 0.22 0"
-                rotation="-90 0 0"
-                radius-inner="3.2"
-                radius-outer="3.4"
-                color="#60a5fa"
-                material="shader: flat; opacity: 0.45; side: double">
-        </a-ring>
-
-        <a-circle
-                id="fakeShadow"
-                position="0 0.21 0"
-                rotation="-90 0 0"
-                radius="2.8"
-                color="#000000"
-                material="shader: flat; opacity: 0.2">
-        </a-circle>
-    </a-entity>
+    <a-entity id="presentationAnchor"></a-entity>
 
     <a-entity id="buildingsRoot"></a-entity>
 </a-scene>
 
-<script src="js/buildingsConfig.js?v=20260515-wiki"></script>
+<script src="js/buildingsConfig.js?v=20260602-tuke"></script>
 <script src="js/store.js?v=20260406-4"></script>
 <script src="js/teleport.js?v=20260406-4"></script>
 <script src="js/swipe-bar.js?v=20260406-4"></script>
-<script src="js/scene.js?v=20260515-wiki"></script>
+<script src="js/scene.js?v=20260602-reload-model"></script>
 
 </body>
 </html>

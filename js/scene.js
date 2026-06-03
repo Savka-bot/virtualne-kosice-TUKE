@@ -21,18 +21,11 @@
         const buildingsRoot = document.getElementById("buildingsRoot");
         const rotateBtn = document.getElementById("rotateBtn");
         const presentationAnchor = document.getElementById("presentationAnchor");
-        const museumPodium = document.getElementById("museumPodium");
-        const focusRing = document.getElementById("focusRing");
-        const fakeShadow = document.getElementById("fakeShadow");
+        const sceneFloor = document.getElementById("sceneFloor");
 
         const pTitle = document.getElementById("pTitle");
         const pDesc = document.getElementById("pDesc");
         const pWikiInfo = document.getElementById("pWikiInfo");
-        const metaLocation = document.getElementById("metaLocation");
-        const metaType = document.getElementById("metaType");
-        const metaStyle = document.getElementById("metaStyle");
-        const metaPeriod = document.getElementById("metaPeriod");
-        const metaArchitect = document.getElementById("metaArchitect");
         const sourceLink = document.getElementById("sourceLink");
         const sourceNoteEl = document.getElementById("sourceNote");
         const audioSk = document.getElementById("audioSk");
@@ -73,8 +66,14 @@
         const PRESENTATION_DISTANCE = 8.5;
         const DOME_RADIUS = 46;
         const MODEL_COLLIDER_PADDING = 2.8;
-        const PODIUM_HEIGHT = 0.32;
         const MODEL_LIFT = 0.03;
+        const MODEL_BOUNDS_MARGIN = 1.1;
+        const DEFAULT_FLOOR_WIDTH = 80;
+        const DEFAULT_FLOOR_DEPTH = 80;
+        const FLOOR_FOOTPRINT_MARGIN = 1.18;
+        const MIN_FLOOR_SIZE = 10;
+        const WASD_ACCELERATION = 52;
+        const WALK_COLLIDER_MARGIN = 0.25;
 
         const presentationOrbitState = {
             isDragging: false,
@@ -288,41 +287,143 @@
             return cfg.modelUrlFallback || cfg.modelPathFallback || "";
         }
 
-        function normalizeModelPivot(modelEl, groundOffsetY, pivotOpts) {
-            const opts = pivotOpts || {};
+        function getModelFootprintRadius(mesh, margin) {
+            const box = getModelWorldBox(mesh);
+            if (box.isEmpty()) return 4;
+            box.getSize(tmpVecB);
+            return Math.max(tmpVecB.x, tmpVecB.z) * 0.5 * (margin || MODEL_BOUNDS_MARGIN);
+        }
+
+        function getModelFootprintSize(mesh, margin) {
+            const box = getModelWorldBox(mesh);
+            if (box.isEmpty()) {
+                return { width: MIN_FLOOR_SIZE, depth: MIN_FLOOR_SIZE, centerX: 0, centerZ: 0 };
+            }
+            box.getCenter(tmpVecA);
+            box.getSize(tmpVecB);
+            const m = margin || FLOOR_FOOTPRINT_MARGIN;
+            return {
+                width: Math.max(tmpVecB.x * m, MIN_FLOOR_SIZE),
+                depth: Math.max(tmpVecB.z * m, MIN_FLOOR_SIZE),
+                centerX: tmpVecA.x,
+                centerZ: tmpVecA.z,
+            };
+        }
+
+        function resetSceneFloor() {
+            if (!sceneFloor) return;
+            sceneFloor.setAttribute("width", DEFAULT_FLOOR_WIDTH);
+            sceneFloor.setAttribute("height", DEFAULT_FLOOR_DEPTH);
+            sceneFloor.setAttribute("position", "0 0 0");
+        }
+
+        function syncSceneFloorToModel(modelEl, cfg) {
+            if (!sceneFloor || !modelEl) return;
+            const mesh = modelEl.getObject3D("mesh");
+            if (!mesh) {
+                resetSceneFloor();
+                return;
+            }
+
+            mesh.updateMatrixWorld(true);
+            const margin =
+                cfg && typeof cfg.floorMargin === "number" ? cfg.floorMargin : FLOOR_FOOTPRINT_MARGIN;
+            const fp = getModelFootprintSize(mesh, margin);
+            const minW =
+                cfg && typeof cfg.floorMinWidth === "number" ? cfg.floorMinWidth : MIN_FLOOR_SIZE;
+            const minD =
+                cfg && typeof cfg.floorMinDepth === "number" ? cfg.floorMinDepth : MIN_FLOOR_SIZE;
+
+            sceneFloor.setAttribute("width", Math.max(fp.width, minW));
+            sceneFloor.setAttribute("height", Math.max(fp.depth, minD));
+            sceneFloor.setAttribute("position", `${fp.centerX} 0 ${fp.centerZ}`);
+        }
+
+        function alignModelGroundY(modelEl, groundOffsetY) {
             const mesh = modelEl.getObject3D("mesh");
             if (!mesh) return;
 
             mesh.updateMatrixWorld(true);
-
-            if (opts.centerModelXZ) {
-                const boxXZ = new THREE.Box3().setFromObject(mesh);
-                if (!boxXZ.isEmpty()) {
-                    boxXZ.getCenter(tmpVecA);
-                    mesh.getWorldPosition(tmpVecB);
-                    const dxW = tmpVecB.x - tmpVecA.x;
-                    const dzW = tmpVecB.z - tmpVecA.z;
-                    if (mesh.parent) {
-                        const pq = new THREE.Quaternion();
-                        mesh.parent.getWorldQuaternion(pq);
-                        const localDelta = new THREE.Vector3(dxW, 0, dzW).applyQuaternion(pq.clone().invert());
-                        mesh.position.x += localDelta.x;
-                        mesh.position.z += localDelta.z;
-                    } else {
-                        mesh.position.x += dxW;
-                        mesh.position.z += dzW;
-                    }
-                    mesh.updateMatrixWorld(true);
-                }
-            }
-
-            const box = new THREE.Box3().setFromObject(mesh);
+            const box = getModelWorldBox(mesh);
             if (box.isEmpty()) return;
 
             mesh.position.y -= box.min.y;
             mesh.position.y += groundOffsetY;
-            mesh.position.y += PODIUM_HEIGHT + MODEL_LIFT;
+            mesh.position.y += MODEL_LIFT;
+            mesh.updateMatrixWorld(true);
+        }
 
+        function resetModelMeshPivot(modelEl, cfg) {
+            const mesh = modelEl.getObject3D("mesh");
+            if (!mesh) return;
+
+            mesh.position.set(0, 0, 0);
+            mesh.rotation.set(0, 0, 0);
+            mesh.scale.set(1, 1, 1);
+
+            const offset = (cfg && cfg.modelOffset) || {};
+            if (offset.position) modelEl.setAttribute("position", offset.position);
+            else modelEl.setAttribute("position", "0 0 0");
+            if (offset.rotation) modelEl.setAttribute("rotation", offset.rotation);
+            else modelEl.setAttribute("rotation", "0 0 0");
+
+            mesh.updateMatrixWorld(true);
+        }
+
+        function centerModelOnPivot(modelEl) {
+            const mesh = modelEl.getObject3D("mesh");
+            if (!mesh) return;
+
+            mesh.updateMatrixWorld(true);
+            const boxXZ = getModelWorldBox(mesh);
+            if (boxXZ.isEmpty()) return;
+
+            boxXZ.getCenter(tmpVecA);
+            if (mesh.parent && mesh.parent.object3D) {
+                mesh.parent.object3D.getWorldPosition(tmpVecB);
+            } else {
+                mesh.getWorldPosition(tmpVecB);
+            }
+
+            const dxW = tmpVecB.x - tmpVecA.x;
+            const dzW = tmpVecB.z - tmpVecA.z;
+            if (mesh.parent) {
+                const pq = new THREE.Quaternion();
+                mesh.parent.getWorldQuaternion(pq);
+                const localDelta = new THREE.Vector3(dxW, 0, dzW).applyQuaternion(pq.clone().invert());
+                mesh.position.x = localDelta.x;
+                mesh.position.z = localDelta.z;
+            } else {
+                mesh.position.x = dxW;
+                mesh.position.z = dzW;
+            }
+            mesh.updateMatrixWorld(true);
+        }
+
+        function multiplyAnimatedScale(animatedEl, factor) {
+            const cur = animatedEl.getAttribute("scale");
+            const parts = String(cur || "1 1 1")
+                .trim()
+                .split(/\s+/)
+                .map(Number);
+            const sx = (parts[0] || 1) * factor;
+            const sy = (parts[1] || 1) * factor;
+            const sz = (parts[2] || 1) * factor;
+            animatedEl.setAttribute("scale", `${sx} ${sy} ${sz}`);
+        }
+
+        function normalizeModelPivot(modelEl, groundOffsetY, pivotOpts, animatedEl, cfg) {
+            const opts = pivotOpts || {};
+            const mesh = modelEl.getObject3D("mesh");
+            if (!mesh) return;
+
+            resetModelMeshPivot(modelEl, cfg);
+
+            if (opts.centerModelXZ) {
+                centerModelOnPivot(modelEl);
+            }
+
+            alignModelGroundY(modelEl, groundOffsetY);
             mesh.updateMatrixWorld(true);
         }
 
@@ -382,15 +483,44 @@
             });
         }
 
-        function setMeshesShadow(modelEl) {
+        function isHeavyBuildingCfg(cfg) {
+            return !!(cfg && cfg.lazyLoad);
+        }
+
+        function optimizeHeavyModelGraph(mesh) {
+            if (!mesh) return;
+
+            mesh.traverse((node) => {
+                if (!node.isMesh) return;
+                node.castShadow = false;
+                node.receiveShadow = false;
+                node.frustumCulled = true;
+                node.matrixAutoUpdate = false;
+                node.updateMatrix();
+
+                const materials = Array.isArray(node.material) ? node.material : [node.material];
+                materials.forEach((mat) => {
+                    if (!mat) return;
+                    if (mat.side !== undefined) mat.side = THREE.FrontSide;
+                });
+            });
+            mesh.updateMatrixWorld(true);
+        }
+
+        function setMeshesShadow(modelEl, cfg) {
             const mesh = modelEl.getObject3D("mesh");
             if (!mesh) return;
+
+            if (isHeavyBuildingCfg(cfg)) {
+                optimizeHeavyModelGraph(mesh);
+                return;
+            }
 
             mesh.traverse((node) => {
                 if (!node.isMesh) return;
                 node.castShadow = true;
                 node.receiveShadow = true;
-                node.frustumCulled = false;
+                node.frustumCulled = true;
 
                 const materials = Array.isArray(node.material) ? node.material : [node.material];
                 materials.forEach((mat) => {
@@ -416,9 +546,11 @@
         }
 
         function updatePresentationVisuals() {
-            if (museumPodium) museumPodium.setAttribute("visible", true);
-            if (focusRing) focusRing.setAttribute("visible", true);
-            if (fakeShadow) fakeShadow.setAttribute("visible", true);
+            if (currentModelEl && currentBuildingCfg) {
+                syncSceneFloorToModel(currentModelEl, currentBuildingCfg);
+            } else {
+                resetSceneFloor();
+            }
         }
 
         function setText(el, value, fallback) {
@@ -485,11 +617,6 @@
                 setText(pTitle, "Model nebol nájdený", "Model nebol nájdený");
                 setText(pDesc, "Vybraná budova nemá dostupné údaje.", "Vybraná budova nemá dostupné údaje.");
                 setText(pWikiInfo, "", "Text z Wikipédie zatiaľ nie je dostupný. / Wikipedia text not available yet.");
-                setText(metaLocation, "", "Neuvedené / Not specified");
-                setText(metaType, "", "Neuvedené / Not specified");
-                setText(metaStyle, "", "Neuvedené / Not specified");
-                setText(metaPeriod, "", "Neuvedené / Not specified");
-                setText(metaArchitect, "", "Neuvedené / Not specified");
                 setSourceLink("", true);
                 setSourceNote("");
                 setAudio(audioSk, audioSkEmpty, "", "Audio v slovenčine zatiaľ nie je dostupné.");
@@ -504,15 +631,30 @@
                 formatWikiInfo(cfg),
                 "Text z Wikipédie zatiaľ nie je dostupný. / Wikipedia text not available yet."
             );
-            setText(metaLocation, cfg.location, "Neuvedené / Not specified");
-            setText(metaType, cfg.type, "Neuvedené / Not specified");
-            setText(metaStyle, cfg.style, "Neuvedené / Not specified");
-            setText(metaPeriod, cfg.period, "Neuvedené / Not specified");
-            setText(metaArchitect, cfg.architect, "Neuvedené / Not specified");
             setSourceLink(cfg.sourceUrl || cfg.source || "");
             setSourceNote(cfg.sourceNote || cfg.sourceDescription || "");
             setAudio(audioSk, audioSkEmpty, cfg.audioSk || "", "Audio v slovenčine zatiaľ nie je dostupné.");
             setAudio(audioEn, audioEnEmpty, cfg.audioEn || "", "English audio is not available yet.");
+        }
+
+        function applyWasdSettings() {
+            if (!cameraEl) return;
+            cameraEl.setAttribute(
+                "wasd-controls",
+                `acceleration: ${WASD_ACCELERATION}; enabled: ${currentNavMode === "walk"}`
+            );
+            const wasdControls = cameraEl.components && cameraEl.components["wasd-controls"];
+            if (wasdControls) {
+                wasdControls.acceleration = WASD_ACCELERATION;
+            }
+        }
+
+        function resetWalkRigOrientation() {
+            presentationOrbitState.isDragging = false;
+            presentationOrbitState.pointerId = null;
+            resetLookControlsOrientation();
+            if (rig) rig.object3D.rotation.set(0, 0, 0);
+            if (cameraEl) cameraEl.object3D.rotation.set(0, 0, 0);
         }
 
         function setControlsEnabled(enabled) {
@@ -529,18 +671,18 @@
 
             if (wasdControls) {
                 wasdControls.pause();
-                wasdControls.enabled = enabled;
-                if (enabled) wasdControls.play();
+                wasdControls.enabled = enabled && currentNavMode === "walk";
+                if (enabled && currentNavMode === "walk") wasdControls.play();
             }
 
             cameraEl.setAttribute("look-controls", `enabled: ${enabled}`);
-            cameraEl.setAttribute("wasd-controls", `acceleration: 22; enabled: ${enabled}`);
+            applyWasdSettings();
         }
 
         function setPresentationControls() {
             if (!cameraEl) return;
             cameraEl.setAttribute("look-controls", "enabled: true");
-            cameraEl.setAttribute("wasd-controls", `acceleration: 22; enabled: ${currentNavMode === "walk"}`);
+            applyWasdSettings();
         }
 
         function setLookControlsEnabled(enabled) {
@@ -678,7 +820,7 @@
         function focusCameraAndRestoreMouseLook() {
             if (!isPresentationModeActive()) return;
             if (currentNavMode === "walk") {
-                applyCameraModePosition(currentCameraMode, true);
+                resetWalkRigOrientation();
                 return;
             }
             setLookControlsEnabled(false);
@@ -702,7 +844,9 @@
             currentNavMode = mode === "walk" ? "walk" : "orbit";
             setPresentationControls();
             updateNavModeUI();
-            if (currentNavMode === "orbit") {
+            if (currentNavMode === "walk") {
+                resetWalkRigOrientation();
+            } else {
                 applyPresentationCamera(true);
             }
         }
@@ -804,6 +948,7 @@
             if (!scene || !rig) return;
 
             const startDrag = (event) => {
+                if (currentNavMode !== "orbit") return;
                 if (!["side1", "side2", "side3", "side4", "top"].includes(currentCameraMode)) return;
                 if (event.target && (event.target.closest("#aframe-ui") || event.target.closest("#zoneModelsPanel"))) return;
 
@@ -814,6 +959,7 @@
             };
 
             const moveDrag = (event) => {
+                if (currentNavMode !== "orbit") return;
                 if (!presentationOrbitState.isDragging) return;
                 if (presentationOrbitState.pointerId !== null && event.pointerId !== presentationOrbitState.pointerId) return;
 
@@ -890,9 +1036,37 @@
             );
         }
 
+        function attachBuildingModelGltf(entry, cfg) {
+            if (!entry || !entry.modelEl) return false;
+
+            const modelUrl = getModelUrl(cfg);
+            if (!modelUrl) return false;
+
+            if (entry.modelAttached && entry.attachedModelUrl === modelUrl) {
+                return true;
+            }
+
+            if (entry.modelAttached) {
+                entry.modelEl.removeAttribute("gltf-model");
+                entry.modelAttached = false;
+                entry.attachedModelUrl = "";
+            }
+
+            const modelOffset = cfg.modelOffset || cfg.modelTransform || {};
+            entry.modelEl.setAttribute("gltf-model", modelUrl);
+            if (modelOffset.position) entry.modelEl.setAttribute("position", modelOffset.position);
+            if (modelOffset.rotation) entry.modelEl.setAttribute("rotation", modelOffset.rotation);
+            if (entry.animatedEl) entry.animatedEl.setAttribute("scale", modelOffset.scale || "1 1 1");
+
+            entry.modelAttached = true;
+            entry.attachedModelUrl = modelUrl;
+            return true;
+        }
+
         function ensureBuildingEntity(cfg, index, total) {
             const buildingId = cfg.id || cfg.key;
-            if (!buildingId || modelRegistry.has(buildingId) || !buildingsRoot) return modelRegistry.get(buildingId) || null;
+            if (!buildingId || !buildingsRoot) return modelRegistry.get(buildingId) || null;
+            if (modelRegistry.has(buildingId)) return modelRegistry.get(buildingId);
 
             const slot = getSceneSlot(index, total);
             const modelUrl = getModelUrl(cfg);
@@ -910,46 +1084,87 @@
             animatedEl.setAttribute("data-id", buildingId);
             const modelEl = document.createElement("a-entity");
             modelEl.setAttribute("data-id", buildingId);
-            const modelOffset = cfg.modelOffset || cfg.modelTransform || {};
-            modelEl.setAttribute("gltf-model", modelUrl);
-            if (modelOffset.position) modelEl.setAttribute("position", modelOffset.position);
-            if (modelOffset.rotation) modelEl.setAttribute("rotation", modelOffset.rotation);
-            animatedEl.setAttribute("scale", modelOffset.scale || "1 1 1");
 
             modelEl.addEventListener("model-loaded", function () {
-                setMeshesShadow(modelEl);
-                normalizeModelPivot(modelEl, typeof cfg.groundOffsetY === "number" ? cfg.groundOffsetY : 0, {
-                    centerModelXZ: !!cfg.centerModelXZ,
-                });
-                const mesh = modelEl.getObject3D("mesh");
-                if (mesh) {
-                    const box = getModelWorldBox(mesh);
-                    if (!box.isEmpty()) {
-                        box.getCenter(tmpVecA);
-                        box.getSize(tmpVecB);
-                        const radius = Math.max(tmpVecB.x, tmpVecB.z) * 0.5 + MODEL_COLLIDER_PADDING;
-                        modelBoundsById.set(buildingId, { center: tmpVecA.clone(), radius: Math.max(radius, 4) });
+                const finishModelReady = function () {
+                    setMeshesShadow(modelEl, cfg);
+                    const mesh = modelEl.getObject3D("mesh");
+                    if (mesh) {
+                        const box = getModelWorldBox(mesh);
+                        if (!box.isEmpty()) {
+                            box.getCenter(tmpVecA);
+                            const radius =
+                                getModelFootprintRadius(mesh, MODEL_BOUNDS_MARGIN) + MODEL_COLLIDER_PADDING;
+                            modelBoundsById.set(buildingId, {
+                                center: tmpVecA.clone(),
+                                radius: Math.max(radius, 4),
+                            });
+                        }
                     }
+                    if (pendingActivationId === buildingId) {
+                        pendingActivationId = null;
+                        activateBuilding(cfg);
+                    } else if (currentBuildingId === buildingId) {
+                        normalizeModelPivot(
+                            modelEl,
+                            typeof cfg.groundOffsetY === "number" ? cfg.groundOffsetY : 0,
+                            { centerModelXZ: !!cfg.centerModelXZ },
+                            animatedEl,
+                            cfg
+                        );
+                        updatePresentationVisuals();
+                    }
+                };
+
+                if (isHeavyBuildingCfg(cfg)) {
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(finishModelReady);
+                    });
+                } else {
+                    finishModelReady();
                 }
-                if (pendingActivationId === buildingId) {
-                    activateBuilding(cfg);
-                    pendingActivationId = null;
-                }
+            });
+
+            modelEl.addEventListener("model-error", function () {
+                console.warn("Model load failed:", buildingId, modelUrl);
+                if (pendingActivationId === buildingId) pendingActivationId = null;
+                setDebug("Chyba načítania modelu: " + buildingId);
             });
 
             animatedEl.appendChild(modelEl);
             containerEl.appendChild(animatedEl);
             buildingsRoot.appendChild(containerEl);
 
-            const entry = { cfg, containerEl, modelEl, slot };
+            const entry = { cfg, containerEl, modelEl, animatedEl, slot, modelAttached: false };
             modelRegistry.set(buildingId, entry);
             modelOrder.push(buildingId);
+
+            if (!cfg.lazyLoad) {
+                attachBuildingModelGltf(entry, cfg);
+            }
+
             return entry;
         }
 
-        function preloadAllBuildings() {
+        function preloadZoneBuildings(zone) {
             const all = getBuildingCollection();
-            all.forEach((cfg, idx) => ensureBuildingEntity(cfg, idx, all.length));
+            all.forEach((cfg, idx) => {
+                if ((cfg.zone || "") !== zone) return;
+                ensureBuildingEntity(cfg, idx, all.length);
+            });
+        }
+
+        function unloadZoneBuildings(exceptZone) {
+            modelRegistry.forEach((entry, buildingId) => {
+                const zone = entry.cfg && entry.cfg.zone ? entry.cfg.zone : "";
+                if (!zone || zone === exceptZone || !entry.modelEl) return;
+
+                entry.modelEl.removeAttribute("gltf-model");
+                entry.modelAttached = false;
+                entry.attachedModelUrl = "";
+                if (entry.containerEl) entry.containerEl.setAttribute("visible", false);
+                modelBoundsById.delete(buildingId);
+            });
         }
 
         function activateBuilding(cfg) {
@@ -970,6 +1185,17 @@
             currentZoneId = cfg.zone || currentZoneId || "";
 
             placePresentationAnchor({ x: entry.slot.x, y: 0, z: entry.slot.z });
+
+            if (entry.animatedEl && entry.modelEl && entry.modelEl.getObject3D("mesh")) {
+                normalizeModelPivot(
+                    entry.modelEl,
+                    typeof cfg.groundOffsetY === "number" ? cfg.groundOffsetY : 0,
+                    { centerModelXZ: !!cfg.centerModelXZ },
+                    entry.animatedEl,
+                    cfg
+                );
+            }
+
             updatePresentationVisuals();
             focusCameraAndRestoreMouseLook();
             rememberSelectedBuilding(currentZoneId, currentBuildingId);
@@ -995,13 +1221,34 @@
                 setDebug("Neznámy objekt: " + buildingId);
                 return;
             }
+
+            const buildingKey = cfg.id || cfg.key;
+            const targetZone = cfg.zone || effectiveZone || currentZoneId;
+            if (targetZone && targetZone !== currentZoneId) {
+                unloadZoneBuildings(targetZone);
+            }
+            currentZoneId = targetZone;
+            preloadZoneBuildings(currentZoneId);
+            renderZoneModels(currentZoneId, buildingKey);
+            updateSidebar(cfg);
+
             const all = getBuildingCollection();
-            const idx = all.findIndex((item) => (item.id || item.key) === (cfg.id || cfg.key));
-            ensureBuildingEntity(cfg, Math.max(idx, 0), Math.max(all.length, 1));
-            if (!modelRegistry.has(cfg.id || cfg.key)) {
-                pendingActivationId = cfg.id || cfg.key;
+            const idx = all.findIndex((item) => (item.id || item.key) === buildingKey);
+            const entry = ensureBuildingEntity(cfg, Math.max(idx, 0), Math.max(all.length, 1));
+            if (!entry) {
+                pendingActivationId = buildingKey;
+                setDebug("Pripravujem model: " + buildingKey + "…");
                 return;
             }
+
+            attachBuildingModelGltf(entry, cfg);
+
+            if (!entry.modelEl.getObject3D("mesh")) {
+                pendingActivationId = buildingKey;
+                setDebug("Načítavam model: " + buildingKey + "…");
+                return;
+            }
+
             activateBuilding(cfg);
         }
 
@@ -1066,13 +1313,14 @@
 
                 if (currentNavMode === "walk" && currentBuildingId && modelBoundsById.has(currentBuildingId)) {
                     const b = modelBoundsById.get(currentBuildingId);
-                    const d = distance3D(pos, b.center);
-                    if (d < b.radius) {
-                        const dirX = pos.x - b.center.x;
-                        const dirZ = pos.z - b.center.z;
-                        const len = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
-                        pos.x = b.center.x + (dirX / len) * b.radius;
-                        pos.z = b.center.z + (dirZ / len) * b.radius;
+                    const dx = pos.x - b.center.x;
+                    const dz = pos.z - b.center.z;
+                    const d = Math.sqrt(dx * dx + dz * dz);
+                    const limit = b.radius - WALK_COLLIDER_MARGIN;
+                    if (d > 0.001 && d < limit) {
+                        const outR = b.radius + WALK_COLLIDER_MARGIN;
+                        pos.x = b.center.x + (dx / d) * outR;
+                        pos.z = b.center.z + (dz / d) * outR;
                     }
                 }
 
@@ -1085,8 +1333,13 @@
                     currentContainerEl.object3D.rotation.y += delta * 0.001;
                 }
 
-                // Ray intersection: detect object in front of camera.
-                if (cameraEl && cameraEl.object3D && currentContainerEl) {
+                // Ray intersection: skip deep traverse on heavy models (very costly).
+                if (
+                    cameraEl &&
+                    cameraEl.object3D &&
+                    currentContainerEl &&
+                    !isHeavyBuildingCfg(currentBuildingCfg)
+                ) {
                     cameraEl.object3D.getWorldPosition(tmpVecA);
                     cameraEl.object3D.getWorldDirection(tmpVecB);
                     raycaster.set(tmpVecA, tmpVecB);
@@ -1099,19 +1352,26 @@
                             scene.dataset.objectAhead = "";
                         }
                     }
+                } else {
+                    scene.dataset.objectAhead = "";
                 }
 
-                // Distance-based nearest model lookup (for BC requirement).
-                let nearestId = "";
-                let nearestDistance = Infinity;
-                modelBoundsById.forEach((b, id) => {
-                    const d = distance3D(pos, b.center);
-                    if (d < nearestDistance) {
-                        nearestDistance = d;
-                        nearestId = id;
-                    }
-                });
-                scene.dataset.nearestObject = nearestId;
+                if (currentNavMode === "walk") {
+                    let nearestId = "";
+                    let nearestDistance = Infinity;
+                    modelBoundsById.forEach((b, id) => {
+                        const d = distance3D(pos, b.center);
+                        if (d < nearestDistance) {
+                            nearestDistance = d;
+                            nearestId = id;
+                        }
+                    });
+                    scene.dataset.nearestObject = nearestId;
+                } else if (currentBuildingId) {
+                    scene.dataset.nearestObject = currentBuildingId;
+                } else {
+                    scene.dataset.nearestObject = "";
+                }
             },
         });
 
@@ -1126,18 +1386,35 @@
         updateCameraModeUI();
         setPresentationControls();
         updateNavModeUI();
-        preloadAllBuildings();
 
-        const params = getParams();
-        const initialBuilding = getBuildingById(params.zone, params.id) || getDefaultBuilding();
+        function bootSceneContent() {
+            const params = getParams();
+            const initialBuilding =
+                getBuildingById(params.zone, params.id) ||
+                getBuildingCollection().find((item) => (item.id || item.key) === params.id) ||
+                getDefaultBuilding();
+            const bootZone =
+                params.zone || (initialBuilding && initialBuilding.zone) || getBuildingCollection()[0]?.zone || "";
 
-        if (initialBuilding) {
-            loadBuilding(initialBuilding.id || initialBuilding.key, initialBuilding.zone || params.zone);
-            setDebug("Spúšťam: " + (initialBuilding.id || "") + " · zóna " + (params.zone || ""));
+            if (bootZone) {
+                preloadZoneBuildings(bootZone);
+            }
+
+            if (initialBuilding) {
+                loadBuilding(initialBuilding.id || initialBuilding.key, initialBuilding.zone || bootZone);
+                setDebug("Spúšťam: " + (initialBuilding.id || "") + " · zóna " + bootZone);
+            } else {
+                renderZoneModels(bootZone, "");
+                updateSidebar(null);
+                setDebug("Žiadna budova v konfigurácii.");
+                console.warn("No building found for initial load.");
+            }
+        }
+
+        if (scene.hasLoaded) {
+            bootSceneContent();
         } else {
-            updateSidebar(null);
-            setDebug("Žiadna budova v konfigurácii.");
-            console.warn("No building found for initial load.");
+            scene.addEventListener("loaded", bootSceneContent, { once: true });
         }
     }
 

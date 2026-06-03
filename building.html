@@ -54,16 +54,27 @@
   const params = new URLSearchParams(window.location.search);
   const currentId = params.get('id');
 
-  // bezpečný prístup k dátam
-  const info = (window.BUILDINGS && currentId) ? window.BUILDINGS[currentId] : null;
+  function resolveBuilding(id) {
+    if (!window.BUILDINGS || !id) return null;
+    if (Array.isArray(window.BUILDINGS)) {
+      return window.BUILDINGS.find((item) => (item.id || item.key) === id) || null;
+    }
+    if (typeof window.BUILDINGS === "object") {
+      return window.BUILDINGS[id] || null;
+    }
+    return null;
+  }
+
+  const info = resolveBuilding(currentId);
 
   if (info) {
-    document.getElementById('title').textContent = info.name || "Budova";
-    document.getElementById('desc').textContent = info.desc || "";
-    document.getElementById('story').textContent = info.story || "";
+    document.getElementById('title').textContent = info.name || info.title || "Budova";
+    document.getElementById('desc').textContent = info.description || info.desc || "";
+    document.getElementById('story').textContent =
+      info.story || info.sourceNote || "";
     const modelEl = document.getElementById('model');
-    const primary = info.model || "";
-    const fallback = info.modelUrlFallback || "";
+    const primary = info.modelPath || info.model || info.modelUrl || "";
+    const fallback = info.modelUrlFallback || info.modelPathFallback || "";
 
     modelEl.setAttribute('gltf-model', primary);
 

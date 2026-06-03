@@ -4,7 +4,7 @@ window.BUILDINGS = {
         name: "Dóm sv. Alžbety",
         desc: "Najväčší gotický chrám na Slovensku.",
         story: "Chrám bol postavený v 14.–15. storočí a je symbolom mesta Košice.",
-        model: "assets/models/alzbety.glb"
+        model: "assets/models/kostol.glb",
     },
     urbanova: {
         name: "Urbanova veža",
