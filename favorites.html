@@ -48,7 +48,7 @@
   </div>
 </div>
 
-<script src="js/buildingsConfig.js"></script>
+<script src="js/buildingsConfig.js?v=20260604-audio"></script>
 <script src="js/swipe-bar.js"></script>
 <script>
   function loadFavorites(){
@@ -74,7 +74,13 @@
     const listEl = document.getElementById("list");
     const fav = loadFavorites();
 
+    function normalizeBuildingId(id) {
+      if (id === "mestska_jakubov_palac") return "mestska_ceskoslovenskej_armady";
+      return id;
+    }
+
     function getBuildingById(id) {
+      id = normalizeBuildingId(id);
       if (!window.BUILDINGS) return null;
       if (Array.isArray(window.BUILDINGS)) {
         return window.BUILDINGS.find(item => (item.id || item.key) === id) || null;

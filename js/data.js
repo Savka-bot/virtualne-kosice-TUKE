@@ -13,9 +13,9 @@ window.BUILDINGS = {
         model: "assets/models/urbanova.glb"
     },
     jakubov: {
-        name: "Jakubov palác",
-        desc: "Romantický palác neogotického štýlu.",
-        story: "Palác pochádza z 19. storočia a slúžil ako reprezentatívne mestské sídlo.",
+        name: "ul. Československej armády",
+        desc: "Neogotická pamiatka na ul. Československej armády v Košiciach (1899–1903).",
+        story: "Neogotická budova na ulici; v roku 1945 tu sídlil prezident Edvard Beneš.",
         model: "assets/models/jakubov.glb"
     }
 };

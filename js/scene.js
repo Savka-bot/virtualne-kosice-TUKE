@@ -113,10 +113,27 @@
             };
         }
 
+        /** Staré záložky / mapy: mestska_jakubov_palac → ul. Československej armády */
+        function normalizeBuildingId(id) {
+            if (id === "mestska_jakubov_palac") return "mestska_ceskoslovenskej_armady";
+            return id || "";
+        }
+
+        function syncUrlBuildingId() {
+            const params = new URLSearchParams(window.location.search);
+            const rawId = params.get("id");
+            if (!rawId) return;
+            const norm = normalizeBuildingId(rawId);
+            if (norm && rawId !== norm) {
+                params.set("id", norm);
+                window.history.replaceState(null, "", window.location.pathname + "?" + params.toString());
+            }
+        }
+
         function getParams() {
             const params = new URLSearchParams(window.location.search);
             const urlZone = params.get("zone") || "";
-            const urlId = params.get("id") || "";
+            const urlId = normalizeBuildingId(params.get("id") || "");
 
             let savedZone = "";
             let savedId = "";
@@ -124,7 +141,7 @@
             try {
                 const saved = JSON.parse(localStorage.getItem("selectedSceneBuilding") || "null");
                 savedZone = saved && saved.zone ? saved.zone : "";
-                savedId = saved && saved.id ? saved.id : "";
+                savedId = normalizeBuildingId(saved && saved.id ? saved.id : "");
             } catch (error) {
                 console.warn("Failed to read selectedSceneBuilding from localStorage:", error);
             }
@@ -187,7 +204,8 @@
         function getFavorites() {
             try {
                 const raw = JSON.parse(localStorage.getItem("favorites") || "[]");
-                return Array.isArray(raw) ? raw : [];
+                if (!Array.isArray(raw)) return [];
+                return raw.map((id) => normalizeBuildingId(id));
             } catch (error) {
                 console.warn("Failed to read favorites:", error);
                 return [];
@@ -1207,6 +1225,7 @@
         }
 
         function loadBuilding(buildingId, explicitZone) {
+            buildingId = normalizeBuildingId(buildingId);
             const params = getParams();
             const effectiveZone = explicitZone || currentZoneId || params.zone;
             const cfg =
@@ -1388,6 +1407,7 @@
         updateNavModeUI();
 
         function bootSceneContent() {
+            syncUrlBuildingId();
             const params = getParams();
             const initialBuilding =
                 getBuildingById(params.zone, params.id) ||

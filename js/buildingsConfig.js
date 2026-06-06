@@ -17,7 +17,7 @@ window.BUILDINGS = [
         audioSk: "assets/audio/sk/hlavna.mp3",
         audioEn: "assets/audio/en/hlavna.mp3",
         modelOffset: {
-            scale: "1 1 1",
+            scale: "0.3 0.3 0.3",
             position: "0 0 0",
             rotation: "0 0 0"
         }
@@ -48,20 +48,20 @@ window.BUILDINGS = [
     {
         id: "historicke_model_of_streets",
         zone: "historicke-centrum",
-        name: "pepsi",
+        name: "Gloria Palac",
         modelPath: "assets/models/pepsi.glb",
-        description: "Záložný objekt pre historické centrum.",
-        wikiInfoSK: "V centre Košíc stoja bežné mestské budovy, na ktorých je viditeľná veľká reklamná tabuľa Pepsi – nejde o samostatnú pamiatku, ale o súčasť ulice a panorámy mesta.",
-        wikiInfoEN: "In central Košice, ordinary city buildings carry a large Pepsi advertising sign – it is not a monument in itself, but part of the streetscape and urban panorama.",
-        location: "Staré Mesto, Košice",
-        type: "Mestský objekt",
-        style: "Urbanistický model",
-        period: "Súčasný digitálny model",
+        description: "Hotel Gloria Palac *** — ubytovanie pri historickom centre Košíc.",
+        wikiInfoSK: "Hotel Gloria Palac je trojhviezdičkový hotel na Bottovej 1 v Starom Meste, na okraji historického centra Košíc. Ponúka izby a apartmány, reštauráciu, kaviareň a konferenčné priestory; priamo pri objekte je nákupné centrum Aupark, k Dómu svätej Alžbety je to približne sedem minút pešo.",
+        wikiInfoEN: "Hotel Gloria Palac is a three-star hotel at Bottova 1 in Staré Mesto, on the edge of Košice's historic centre. It offers rooms and apartments, a restaurant, café and conference facilities; the Aupark shopping centre stands next to the building, and St Elizabeth's Cathedral is about a seven-minute walk away.",
+        location: "Bottova 1, Košice",
+        type: "Hotel",
+        style: "Súčasná mestská zástavba",
+        period: "Súčasný prevádzkový objekt",
         architect: "Neuvedené",
-        sourceUrl: "",
-        sourceNote: "3D model vytvorený pre projekt Virtuálne Košice (vlastná tvorba). / 3D model created for the Virtual Košice project (original work).",
-        audioSk: "assets/audio/sk/pepsi.mp3",
-        audioEn: "assets/audio/en/pepsi.mp3",
+        sourceUrl: "https://www.gloriapalac.sk/",
+        sourceNote: "Popis podľa oficiálnej stránky Hotel Gloria Palac. 3D model: Virtuálne Košice. / Description based on the official Hotel Gloria Palac website. 3D model: Virtual Košice.",
+        audioSk: "assets/audio/sk/gloaria_palac_sk.mp3",
+        audioEn: "assets/audio/en/gloria_palac_en.mp3",
         centerModelXZ: true,
         modelOffset: {
             scale: "1 1 1",
@@ -87,7 +87,7 @@ window.BUILDINGS = [
         audioSk: "assets/audio/sk/dom_svatej_alzbety.mp3",
         audioEn: "assets/audio/en/svatej%20alzbety.mp3",
         modelOffset: {
-            scale: "10 10 10",
+            scale: "5 5 5",
             position: "0 0 0",
             rotation: "0 0 0"
         }
@@ -132,8 +132,8 @@ window.BUILDINGS = [
         architect: "Neuvedené",
         sourceUrl: "",
         sourceNote: "3D model vytvorený pre projekt Virtuálne Košice (vlastná tvorba). / 3D model created for the Virtual Košice project (original work).",
-        audioSk: "assets/audio/sk/both.mp3",
-        audioEn: "assets/audio/en/both.mp3",
+        audioSk: "assets/audio/sk/tuke_sk.mp3",
+        audioEn: "assets/audio/en/tuke_en.mp3",
         modelOffset: {
             scale: "1 1 1",
             position: "0 0 0",
@@ -179,11 +179,11 @@ window.BUILDINGS = [
         architect: "Neuvedené",
         sourceUrl: "",
         sourceNote: "3D model vytvorený pre projekt Virtuálne Košice (vlastná tvorba). / 3D model created for the Virtual Košice project (original work).",
-        audioSk: "assets/audio/sk/palackeho.mp3",
-        audioEn: "assets/audio/en/palackeho.mp3",
+        audioSk: "assets/audio/sk/aupark_sk.mp3",
+        audioEn: "assets/audio/en/aupark_en.mp3",
         centerModelXZ: true,
         modelOffset: {
-            scale: "0.8 0.8 0.8",
+            scale: "0.4 0.4 0.4",
             position: "0 0 0",
             rotation: "0 0 0"
         }
@@ -207,29 +207,28 @@ window.BUILDINGS = [
         audioEn: "assets/audio/en/zeleznicna-stanica.mp3",
         centerModelXZ: true,
         modelOffset: {
-            scale: "1 1 1",
+            scale: "0.3 0.3 0.3",
             position: "0 0 0",
             rotation: "0 0 0"
         }
     },
     {
-        id: "mestska_jakubov_palac",
+        id: "mestska_ceskoslovenskej_armady",
         zone: "mestska-zona",
-        name: "Jakubov palác",
-        // Dočasný GLB: v priečinku models nie je jakubov.glb — zatiaľ zdieľaný placeholder.
-        modelPath: "assets/models/MODEL_PALACKEHO.glb",
-        description: "Neogotický palác v širšom mestskom kontexte.",
-        wikiInfoSK: "Jakabov palác v Košiciach je mohutná neogotická stavba z 19. storočia, ktorú dal postaviť stavebník a podnikateľ Peter Jakab. Pôvodne slúžil ako jeho sídlo; dnes je významnou dominantou mestského prostredia.",
-        wikiInfoEN: "Jakabov Palace in Košice is a striking 19th-century neo-Gothic mansion built by builder and entrepreneur Peter Jakab. Originally his residence, it remains a prominent landmark in the city.",
-        location: "Mestská zóna, Košice",
-        type: "Mestská budova",
+        name: "ul. Československej armády",
+        modelPath: "assets/models/center.glb",
+        description: "Neogotická pamiatka (1899–1903); v roku 1945 sídlo prezidenta Edvarda Beneša.",
+        wikiInfoSK: "Ul. Československej armády v Košiciach — neogotická národná kultúrna pamiatka z rokov 1899–1903. Pri výstavbe boli použité kamenné časti z Dómu svätej Alžbety; v roku 1945 tu sídlil prezident Edvard Beneš.",
+        wikiInfoEN: "Československej armády Street in Košice — a neo-Gothic national cultural monument from 1899–1903. Stone elements from St. Elizabeth Cathedral were reused in its construction; in 1945 it served as the residence of President Edvard Beneš.",
+        location: "ul. Československej armády, Košice",
+        type: "Historická pamiatka",
         style: "Neogotika",
-        period: "19. storočie",
-        architect: "Neuvedené",
+        period: "1899–1903",
+        architect: "Peter Jakab",
         sourceUrl: "https://sk.wikipedia.org/wiki/Jakabov_pal%C3%A1c",
-        sourceNote: "3D model: Virtuálne Košice. Historický palác (Jakabov palác): Wikipédia (SK). / 3D model: Virtual Košice. Jakabov Palace: Slovak Wikipedia.",
-        audioSk: "assets/audio/sk/jakubov.mp3",
-        audioEn: "assets/audio/en/jakobov%20palac.mp3",
+        sourceNote: "3D model: Virtuálne Košice. Informácie o pamiatke: Wikipédia (SK), oficiálne stránky mesta Košice. / 3D model: Virtual Košice. Monument information: Slovak Wikipedia, City of Košice.",
+        audioSk: "assets/audio/sk/cecho_slovenskej_armady_sk.mp3",
+        audioEn: "assets/audio/en/cecho_slovenskej_armady_en.mp3",
         modelOffset: {
             scale: "1 1 1",
             position: "0 0 0",
