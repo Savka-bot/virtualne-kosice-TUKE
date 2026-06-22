@@ -1,4 +1,3 @@
-// Jednotný zdroj dát pre celý prototyp
 window.BUILDINGS = {
     alzbety: {
         name: "Dóm sv. Alžbety",

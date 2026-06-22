@@ -1,5 +1,3 @@
-/* Vertikálny posuv + vlastná „swipe“ lišta (thumb + track) */
-
 .swipe-panel {
   position: relative;
   display: flex;
@@ -95,14 +93,12 @@
   opacity: 1;
 }
 
-/* Stránky so style.css – obal kontajnera */
 .swipe-panel--page {
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
 }
 
-/* 3D scéna: pravý panel modelov */
 #zoneModelsPanel.swipe-panel {
   max-height: min(85vh, 720px);
   overflow: hidden;
@@ -114,7 +110,6 @@
   }
 }
 
-/* Bočný panel – scrollovateľný obsah */
 .sidebar-panel.swipe-panel {
   max-height: min(92vh, 880px);
   padding: 0;

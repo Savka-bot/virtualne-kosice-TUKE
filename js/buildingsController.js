@@ -18,10 +18,6 @@
     }
   }
 
-  // Нажатие на кнопку справа:
-  // 1. удаляем текущую модель и загружаем новую
-  // 2. обновляем выбор в store
-  // 3. teleport оставляем как fallback, если он где-то еще нужен
   window.goToBuildingZone = function goToBuildingZone(id) {
     loadSceneBuilding(id);
     setBuildingSelection(id, { openSidebar: true });
@@ -31,8 +27,6 @@
     }
   };
 
-  // Клик по самой модели в сцене:
-  // только открывает/обновляет карточку, без повторной загрузки
   window.selectBuilding = function selectBuilding(id, opts = {}) {
     setBuildingSelection(id, { openSidebar: true });
 

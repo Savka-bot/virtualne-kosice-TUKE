@@ -73,7 +73,6 @@ def parse_json(handler):
 
 class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, directory=None, **kwargs):
-        # Always serve static files from project root, regardless of current cwd.
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def _set_cors_headers(self):

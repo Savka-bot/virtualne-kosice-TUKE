@@ -16,7 +16,6 @@
     to   { transform: scale(1.25) translateY(-25px); }
 }
 
-/* ====== ОБЩИЕ ====== */
 * { box-sizing: border-box; }
 
 body {
@@ -32,7 +31,6 @@ body {
     overflow: hidden;
 }
 
-/* ====== NAVBAR ====== */
 .navbar {
     position: fixed;
     top: 0;
@@ -77,7 +75,6 @@ body {
     background: linear-gradient(90deg, #6a89ff, #2b4bd9);
 }
 
-/* ====== КОНТЕЙНЕР ====== */
 .container {
     background: rgba(48, 57, 74, 0.85);
     padding: 40px 60px;
@@ -89,7 +86,6 @@ body {
     backdrop-filter: blur(8px);
 }
 
-/* ====== ТЕКСТ ====== */
 .title {
     font-size: 3em;
     font-weight: 600;
@@ -109,7 +105,6 @@ body {
     animation-delay: 0.6s;
 }
 
-/* ====== КНОПКИ ====== */
 .main-btn {
     background: linear-gradient(90deg, #4e73df, #1e3c90);
     color: white;
@@ -161,7 +156,6 @@ body {
     transform: none;
 }
 
-/* ====== АНИМАЦИИ ====== */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(30px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -172,7 +166,6 @@ body {
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ====== MAIN ====== */
 .main-container {
     margin-top: 120px;
     text-align: center;
@@ -232,7 +225,6 @@ body {
     font-size: 0.9em;
 }
 
-/* ====== ФОРМЫ ====== */
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -258,7 +250,6 @@ body {
     box-shadow: 0 0 6px rgba(100, 120, 255, 0.5);
 }
 
-/* ====== ПРОФИЛЬ ====== */
 .profile-box {
     display: flex;
     flex-direction: column;
@@ -323,7 +314,6 @@ body {
     margin-top: 8px;
 }
 
-/* ====== ШАПКА И ЗАГОЛОВКИ ====== */
 .title {
     font-family: 'Poppins', 'Segoe UI', sans-serif;
     font-weight: 700;
@@ -351,7 +341,6 @@ body {
     margin-bottom: 30px;
 }
 
-/* ====== BIG SEARCH CARDS ====== */
 .big-card {
     width: 330px;
     background: rgba(255,255,255,0.06);
@@ -418,7 +407,6 @@ body {
     background: rgba(120,150,255,0.35);
 }
 
-/* ====== SEARCH SUGGESTIONS ====== */
 .suggestions {
     position: absolute;
     top: 185px;
@@ -447,7 +435,6 @@ body {
     background: rgba(255,255,255,0.1);
 }
 
-/* ====== A-FRAME UI OVERLAY ====== */
 #aframe-ui {
     position: fixed;
     inset: 0;

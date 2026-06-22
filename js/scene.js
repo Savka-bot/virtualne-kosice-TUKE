@@ -2,19 +2,7 @@
     const scene = document.querySelector("a-scene");
     if (!scene) return;
 
-    const debugEl = document.getElementById("sceneDebugStatus");
-
-    function setDebug(msg) {
-        if (debugEl) debugEl.textContent = msg;
-        console.log("[3dscene]", msg);
-    }
-
-    window.addEventListener("error", function (e) {
-        setDebug("Chyba JS: " + (e.message || "neznáma"));
-    });
-
     function initSceneRuntime() {
-        setDebug("Skript beží · čakám na scénu…");
 
         const cameraEl = scene.querySelector("[camera]");
         const rig = document.getElementById("rig");
@@ -94,7 +82,6 @@
             pitchOffset: 0,
             baseYaw: 0,
             basePitch: -0.38,
-            /** Zoom v režime Orbit (násobok vzdialenosti z getFramingFromModel). */
             orbitDistanceScale: 1,
         };
 
@@ -102,8 +89,6 @@
             return Math.min(max, Math.max(min, v));
         }
 
-        // Required 3D distance formula:
-        // d = sqrt((x2-x1)^2 + (y2-y1)^2 + (z2-z1)^2)
         function distance3D(a, b) {
             const dx = b.x - a.x;
             const dy = b.y - a.y;
@@ -123,7 +108,6 @@
             };
         }
 
-        /** Staré záložky / mapy: mestska_jakubov_palac → ul. Československej armády */
         function normalizeBuildingId(id) {
             if (id === "mestska_jakubov_palac") return "mestska_ceskoslovenskej_armady";
             return id || "";
@@ -153,7 +137,6 @@
                 savedZone = saved && saved.zone ? saved.zone : "";
                 savedId = normalizeBuildingId(saved && saved.id ? saved.id : "");
             } catch (error) {
-                console.warn("Failed to read selectedSceneBuilding from localStorage:", error);
             }
 
             return {
@@ -207,7 +190,6 @@
             try {
                 localStorage.setItem("selectedSceneBuilding", JSON.stringify({ zone, id }));
             } catch (error) {
-                console.warn("Failed to store selectedSceneBuilding:", error);
             }
         }
 
@@ -217,7 +199,6 @@
                 if (!Array.isArray(raw)) return [];
                 return raw.map((id) => normalizeBuildingId(id));
             } catch (error) {
-                console.warn("Failed to read favorites:", error);
                 return [];
             }
         }
@@ -226,7 +207,6 @@
             try {
                 localStorage.setItem("favorites", JSON.stringify(arr));
             } catch (error) {
-                console.warn("Failed to save favorites:", error);
             }
         }
 
@@ -596,7 +576,6 @@
             return (cfg.wikiInfoSK || "").trim();
         }
 
-        /** Jednotný nadpis zdroja pre všetky objekty. */
         function localizeSourceNote(text) {
             if (!text) return "";
             return getUnifiedSourceNote();
@@ -703,7 +682,6 @@
             if (cameraEl) cameraEl.object3D.position.set(0, 0, 0);
         }
 
-        /** Presun rigu na skutočnú pozíciu oka (world) — zachová výšku Y, bez skoku hore. */
         function snapRigToCameraWorldEye() {
             if (!rig || !cameraEl) return;
             const rigY = rig.object3D.position.y;
@@ -747,7 +725,6 @@
             if (code === "ArrowDown") walkKeyState.down = pressed;
         }
 
-        /** Voľný pohyb v rovine XZ — žiadne kolízne steny ani odrážanie od modelu. */
         function applyWalkMovement(deltaMs) {
             if (currentNavMode !== "walk" || !rig || !cameraEl) {
                 walkVelocity.set(0, 0, 0);
@@ -997,7 +974,6 @@
             }
         }
 
-        /** Vynuluje úpravy z predchádzajúcej steny (zoom, look-controls) — pozícia rigu sa nastaví zvlášť. */
         function resetWallViewState() {
             presentationOrbitState.isDragging = false;
             presentationOrbitState.pointerId = null;
@@ -1014,7 +990,6 @@
             resetLookControlsOrientation();
         }
 
-        /** Len pozícia rigu podľa aktuálnej steny — bez otáčania kamery. */
         function applyPresentationRigPosition() {
             if (!rig) return getLookTarget();
 
@@ -1062,7 +1037,6 @@
             aimCameraAtTarget(lookAt);
         }
 
-        /** Nastaví smer kamery na bod. Zhora: look-controls (nie rotácia rigu — inak kupola). */
         function aimCameraAtTarget(targetPoint) {
             if (!rig || !cameraEl) return;
 
@@ -1082,7 +1056,6 @@
 
             const horiz = Math.hypot(tmpVecA.x, tmpVecA.z);
             const yaw = horiz > 1e-4 ? Math.atan2(-tmpVecA.x, -tmpVecA.z) : 0;
-            // look-controls: záporný pitch = pohľad nadol (kladný = do kupoly/oblohy).
             let pitch = horiz > 1e-6
                 ? Math.atan2(tmpVecA.y, horiz)
                 : THREE.MathUtils.degToRad(-89);
@@ -1214,7 +1187,6 @@
             updateCameraModeUI();
         }
 
-        /** Otáčanie myšou rieši look-controls — vlastný pointer-drag s ním bojoval. */
         function bindPresentationPointerControls() {}
 
         function getThreeCamera() {
@@ -1223,7 +1195,6 @@
             return cam || cameraEl.object3D;
         }
 
-        /** Bod pod kurzorom: zásah modelu, inak bod na lúči v hĺbke cieľa (nie stred obrazovky). */
         function getOrbitZoomPivot(event, out) {
             const target = getLookTarget();
 
@@ -1271,7 +1242,6 @@
             return out;
         }
 
-        /** Obmedzí dolly faktor tak, aby vzdialenosť k cieľu ostala v limite, ale smer od pivotu sa nemení. */
         function clampDollyFactorAlongPivot(eye, pivot, target, factor, minDist, maxDist) {
             function distAt(f) {
                 tmpVecB.copy(eye).sub(pivot).multiplyScalar(f).add(pivot);
@@ -1322,7 +1292,6 @@
             );
         }
 
-        /** Priblíženie k bodu pod kurzorom: eye' = pivot + (eye - pivot) * factor. */
         function applyOrbitDollyZoom(event) {
             if (!rig || !cameraEl) return;
 
@@ -1481,9 +1450,7 @@
             });
 
             modelEl.addEventListener("model-error", function () {
-                console.warn("Model load failed:", buildingId, modelUrl);
                 if (pendingActivationId === buildingId) pendingActivationId = null;
-                setDebug("Chyba načítania modelu: " + buildingId);
             });
 
             animatedEl.appendChild(modelEl);
@@ -1558,7 +1525,6 @@
             renderZoneModels(currentZoneId, currentBuildingId);
             updateCameraModeUI();
             updateFavButtonState();
-            setDebug("Aktívny model: " + buildingId);
         }
 
         function loadBuilding(buildingId, explicitZone) {
@@ -1571,10 +1537,8 @@
                 null;
 
             if (!cfg) {
-                console.warn("Unknown building id:", buildingId);
                 updateSidebar(null);
                 renderZoneModels(effectiveZone, "");
-                setDebug("Neznámy objekt: " + buildingId);
                 return;
             }
 
@@ -1593,7 +1557,6 @@
             const entry = ensureBuildingEntity(cfg, Math.max(idx, 0), Math.max(all.length, 1));
             if (!entry) {
                 pendingActivationId = buildingKey;
-                setDebug("Pripravujem model: " + buildingKey + "…");
                 return;
             }
 
@@ -1601,7 +1564,6 @@
 
             if (!entry.modelEl.getObject3D("mesh")) {
                 pendingActivationId = buildingKey;
-                setDebug("Načítavam model: " + buildingKey + "…");
                 return;
             }
 
@@ -1708,7 +1670,6 @@
                     currentContainerEl.object3D.rotation.y += delta * 0.001;
                 }
 
-                // Ray intersection: skip in walk mode and on heavy models (very costly).
                 if (
                     currentNavMode !== "walk" &&
                     cameraEl &&
@@ -1779,12 +1740,9 @@
 
             if (initialBuilding) {
                 loadBuilding(initialBuilding.id || initialBuilding.key, initialBuilding.zone || bootZone);
-                setDebug("Spúšťam: " + (initialBuilding.id || "") + " · zóna " + bootZone);
             } else {
                 renderZoneModels(bootZone, "");
                 updateSidebar(null);
-                setDebug("Žiadna budova v konfigurácii.");
-                console.warn("No building found for initial load.");
             }
         }
 
@@ -1795,16 +1753,5 @@
         }
     }
 
-    try {
-        initSceneRuntime();
-    } catch (err) {
-        setDebug("Inicializácia zlyhala: " + (err && err.message ? err.message : String(err)));
-        console.error(err);
-    }
-
-    if (scene) {
-        scene.addEventListener("loaded", function () {
-            if (debugEl) debugEl.textContent = (debugEl.textContent || "") + " · scéna pripravená";
-        });
-    }
+    initSceneRuntime();
 })();

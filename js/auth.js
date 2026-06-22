@@ -2,9 +2,6 @@
     var STORAGE_KEY = "vk_auth_ok";
     var REGISTERED_KEY = "vk_registered_users";
 
-    /**
-     * Predvolení používatelia (v kóde).
-     */
     var AUTH_USERS = [
         { login: "kosice", password: "virt2026" },
         { login: "student", password: "student" },
@@ -69,11 +66,6 @@
         return ok;
     }
 
-    /**
-     * Registrácia — uloží účet do localStorage (iba v tomto prehliadači).
-     * @param {{ login: string, firstName: string, lastName: string, email: string, password: string, passwordAgain: string }} data
-     * @returns {{ ok: boolean, message: string }}
-     */
     function register(data) {
         data = data || {};
         var user = String(data.login || "").trim();

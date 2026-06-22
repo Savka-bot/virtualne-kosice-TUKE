@@ -1,5 +1,4 @@
 (function () {
-  // Централизованное состояние (в первую очередь selectedBuilding).
   const state = {
     selectedBuildingId: null,
     sidebarOpen: false,
@@ -41,7 +40,6 @@
   function subscribe(listener) {
     if (typeof listener !== "function") return () => {};
     listeners.add(listener);
-    // сразу синхронизируем текущее состояние
     listener(state);
     return () => listeners.delete(listener);
   }
