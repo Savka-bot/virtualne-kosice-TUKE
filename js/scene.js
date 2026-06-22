@@ -64,7 +64,13 @@
         const modelBoundsById = new Map();
         const tmpVecA = new THREE.Vector3();
         const tmpVecB = new THREE.Vector3();
+        const tmpVecC = new THREE.Vector3();
+        const tmpVecD = new THREE.Vector3();
+        const tmpMouseNdc = new THREE.Vector2();
+        const tmpPlane = new THREE.Plane();
         const raycaster = new THREE.Raycaster();
+        const ORBIT_ZOOM_MIN_SCALE = 0.38;
+        const ORBIT_ZOOM_MAX_SCALE = 2.4;
 
         const ARENA = { minX: -30, maxX: 30, minZ: -30, maxZ: 10 };
         const BOUNDS = { minX: -35, maxX: 35, minZ: -35, maxZ: 15 };
@@ -1211,6 +1217,159 @@
         /** Otáčanie myšou rieši look-controls — vlastný pointer-drag s ním bojoval. */
         function bindPresentationPointerControls() {}
 
+        function getThreeCamera() {
+            if (!cameraEl) return null;
+            const cam = cameraEl.getObject3D && cameraEl.getObject3D("camera");
+            return cam || cameraEl.object3D;
+        }
+
+        /** Bod pod kurzorom: zásah modelu, inak bod na lúči v hĺbke cieľa (nie stred obrazovky). */
+        function getOrbitZoomPivot(event, out) {
+            const target = getLookTarget();
+
+            const threeCam = getThreeCamera();
+            if (!threeCam || !cameraEl) {
+                out.copy(target);
+                return out;
+            }
+
+            const canvas = scene.canvas || (scene.renderer && scene.renderer.domElement);
+            if (!canvas || typeof event.clientX !== "number") {
+                out.copy(target);
+                return out;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width || !rect.height) {
+                out.copy(target);
+                return out;
+            }
+
+            tmpMouseNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            tmpMouseNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            threeCam.updateMatrixWorld(true);
+            raycaster.setFromCamera(tmpMouseNdc, threeCam);
+
+            const mesh = currentModelEl && currentModelEl.getObject3D
+                ? currentModelEl.getObject3D("mesh")
+                : null;
+            if (mesh) {
+                mesh.updateMatrixWorld(true);
+                const hits = raycaster.intersectObject(mesh, true);
+                if (hits.length > 0) {
+                    out.copy(hits[0].point);
+                    return out;
+                }
+            }
+
+            cameraEl.object3D.getWorldDirection(tmpVecB);
+            tmpPlane.setFromNormalAndCoplanarPoint(tmpVecB, target);
+            const hitPoint = raycaster.ray.intersectPlane(tmpPlane, out);
+            if (hitPoint) return out;
+            out.copy(target);
+            return out;
+        }
+
+        /** Obmedzí dolly faktor tak, aby vzdialenosť k cieľu ostala v limite, ale smer od pivotu sa nemení. */
+        function clampDollyFactorAlongPivot(eye, pivot, target, factor, minDist, maxDist) {
+            function distAt(f) {
+                tmpVecB.copy(eye).sub(pivot).multiplyScalar(f).add(pivot);
+                return distance3D(tmpVecB, target);
+            }
+
+            const d = distAt(factor);
+            if (d >= minDist && d <= maxDist) return factor;
+
+            if (factor < 1 && d < minDist) {
+                let lo = factor;
+                let hi = 1;
+                for (let i = 0; i < 16; i++) {
+                    const mid = (lo + hi) * 0.5;
+                    if (distAt(mid) < minDist) lo = mid;
+                    else hi = mid;
+                }
+                return hi;
+            }
+
+            if (factor > 1 && d > maxDist) {
+                let lo = 1;
+                let hi = factor;
+                for (let i = 0; i < 16; i++) {
+                    const mid = (lo + hi) * 0.5;
+                    if (distAt(mid) > maxDist) hi = mid;
+                    else lo = mid;
+                }
+                return lo;
+            }
+
+            return factor;
+        }
+
+        function syncOrbitDistanceScaleFromRig() {
+            if (!rig) return;
+            const framing = getFramingFromModel();
+            const target = getLookTarget();
+            const pos = rig.object3D.position;
+            const isTop = currentCameraMode === "top";
+            const base = isTop ? framing.topHeight : framing.distance;
+            if (base < 1e-3) return;
+            const d = distance3D(pos, target);
+            presentationOrbitState.orbitDistanceScale = clamp(
+                d / base,
+                ORBIT_ZOOM_MIN_SCALE,
+                ORBIT_ZOOM_MAX_SCALE
+            );
+        }
+
+        /** Priblíženie k bodu pod kurzorom: eye' = pivot + (eye - pivot) * factor. */
+        function applyOrbitDollyZoom(event) {
+            if (!rig || !cameraEl) return;
+
+            resetCameraLocalPosition();
+            cameraEl.object3D.getWorldPosition(tmpVecA);
+
+            const framing = getFramingFromModel();
+            const target = getLookTarget();
+            const isTop = currentCameraMode === "top";
+            const baseDist = isTop ? framing.topHeight : framing.distance;
+            const minDist = baseDist * ORBIT_ZOOM_MIN_SCALE;
+            const maxDist = baseDist * ORBIT_ZOOM_MAX_SCALE;
+
+            getOrbitZoomPivot(event, tmpVecC);
+
+            let distEyePivot = tmpVecA.distanceTo(tmpVecC);
+            if (distEyePivot < 0.2) {
+                cameraEl.object3D.getWorldDirection(tmpVecB);
+                tmpVecC.copy(tmpVecA).addScaledVector(tmpVecB, Math.max(baseDist * 0.4, 1.5));
+                distEyePivot = tmpVecA.distanceTo(tmpVecC);
+            }
+
+            let factor = Math.exp(-event.deltaY * 0.0012);
+            if (!Number.isFinite(factor) || Math.abs(factor - 1) < 1e-6) return;
+
+            const minEyePivot = 0.3;
+            if (distEyePivot * factor < minEyePivot && factor < 1) {
+                factor = minEyePivot / distEyePivot;
+            }
+
+            factor = clampDollyFactorAlongPivot(
+                tmpVecA,
+                tmpVecC,
+                target,
+                factor,
+                minDist,
+                maxDist
+            );
+
+            tmpVecD.copy(tmpVecA).sub(tmpVecC).multiplyScalar(factor);
+            rig.object3D.position.copy(tmpVecC).add(tmpVecD);
+            resetCameraLocalPosition();
+
+            syncOrbitDistanceScaleFromRig();
+            if (lastSafe) lastSafe.copy(rig.object3D.position);
+        }
+
         function bindOrbitWheelZoom() {
             if (!scene) return;
             scene.addEventListener(
@@ -1226,13 +1385,7 @@
                         return;
                     }
                     event.preventDefault();
-                    const delta = event.deltaY > 0 ? 0.07 : -0.07;
-                    presentationOrbitState.orbitDistanceScale = clamp(
-                        presentationOrbitState.orbitDistanceScale + delta,
-                        0.38,
-                        2.4
-                    );
-                    applyPresentationRigPosition();
+                    applyOrbitDollyZoom(event);
                 },
                 { passive: false }
             );
